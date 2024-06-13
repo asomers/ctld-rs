@@ -3,6 +3,10 @@ name = "ctld"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "ctld"
+path = "src/main.rs"
+
 [dependencies]
 strum = {version = "0.26.2", features = ["derive"] }
 uclicious = "0.1.8"
