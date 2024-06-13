@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::Read,
+    io::{self, Read},
     net::SocketAddr,
     path::{Path, PathBuf}
 };
@@ -203,13 +203,18 @@ pub struct Conf {
 }
 
 impl Conf {
-    pub fn open<P: AsRef<Path>>(p: P) -> Self {
-        let mut f = std::fs::File::open(p).unwrap();
+    pub fn open<P: AsRef<Path>>(p: P) -> io::Result<Self> {
+        let mut f = std::fs::File::open(p)?;
         let mut contents = String::new();
-        f.read_to_string(&mut contents).unwrap();
+        f.read_to_string(&mut contents)?;
+        // TODO: use anyerror here
         let mut builder = Conf::builder().unwrap();
         builder.add_chunk_full(&contents, Priority::default(), DEFAULT_DUPLICATE_STRATEGY).unwrap();
         let conf: Conf = builder.build().unwrap();
-        conf
+        Ok(conf)
+    }
+
+    pub fn from_kernel() -> io::Result<()> {
+        todo!()
     }
 }
