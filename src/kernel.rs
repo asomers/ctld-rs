@@ -11,6 +11,9 @@ use std::{
     process,
 };
 
+use serde::{Deserialize};
+use serde_derive::{Deserialize};
+
 mod ioc {
     use nix::ioctl_readwrite;
 
@@ -64,4 +67,81 @@ pub fn get_lun_list(ctl_fd: &fs::File) -> io::Result<String> {
 /// Get the kernel's current port list as XML
 pub fn get_port_list(ctl_fd: &fs::File) -> io::Result<String> {
     get_lunport_list(ctl_fd, true)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Lun {
+    #[serde(rename = "@id")]
+    pub id: String,
+    #[serde(rename = "$text")]
+    pub text: Option<String>,
+    pub backend_type: String,
+    pub lun_type: String,
+    pub size: String,
+    pub blocksize: String,
+    pub serial_number: String,
+    pub device_id: String,
+    pub num_threads: String,
+    pub file: String,
+    pub ctld_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Ctllunlist {
+    #[serde(rename = "$text")]
+    pub text: Option<String>,
+    pub lun: Vec<Lun>,
+}
+
+impl Ctllunlist {
+    pub fn from_kernel(ctl_fd: &fs::File) -> io::Result<Self> {
+        let xml = get_lun_list(ctl_fd)?;
+        let llist: Self = quick_xml::de::from_str(&xml).unwrap();
+        Ok(llist)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TargPort {
+    #[serde(rename = "@id")]
+    pub id: String,
+    #[serde(rename = "$text")]
+    pub text: Option<String>,
+    pub frontend_type: String,
+    pub port_type: String,
+    pub online: String,
+    pub port_name: String,
+    pub physical_port: String,
+    pub virtual_port: String,
+    pub lun: Option<TargetLun>,
+    pub lun_map: Option<String>,
+    pub cfiscsi_portal_group_tag: Option<String>,
+    pub ctld_portal_group_name: Option<String>,
+    pub cfiscsi_target: Option<String>,
+    pub cfiscsi_state: Option<String>,
+    pub port: Option<String>,
+    pub target: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TargetLun {
+    #[serde(rename = "@id")]
+    pub id: String,
+    #[serde(rename = "$text")]
+    pub text: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Ctlportlist {
+    #[serde(rename = "$text")]
+    pub text: Option<String>,
+    pub targ_port: Vec<TargPort>,
+}
+
+impl Ctlportlist {
+    pub fn from_kernel(ctl_fd: &fs::File) -> io::Result<Self> {
+        let xml = get_port_list(ctl_fd)?;
+        let plist: Self = quick_xml::de::from_str(&xml).unwrap();
+        Ok(plist)
+    }
 }

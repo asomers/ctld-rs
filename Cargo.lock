@@ -143,6 +143,8 @@ dependencies = [
  "clap",
  "nix",
  "quick-xml",
+ "serde",
+ "serde_derive",
  "strum",
  "uclicious",
 ]

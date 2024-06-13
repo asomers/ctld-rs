@@ -14,6 +14,8 @@ path = "src/dump.rs"
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
 nix = { version = "0.29.0", features = [ "ioctl" ] }
-quick-xml = {version = "0.32.0", features = ["serde"] }
+quick-xml = {version = "0.32.0", features = ["serialize"] }
+serde = "1.0.119"
+serde_derive = "1.0.119"
 strum = {version = "0.26.2", features = ["derive"] }
 uclicious = "0.1.8"
