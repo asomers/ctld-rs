@@ -31,12 +31,12 @@ fn main() -> io::Result<()> {
     let ctl_fd = fs::File::open(&ctl_dev_path)?;
 
     if cli.lun {
-        let xml = kernel::get_lun_list(&ctl_fd)?;
+        let xml = kernel::Ctllunlist::as_xml(&ctl_fd)?;
         println!("{}", xml);
     }
 
     if cli.port {
-        let xml = kernel::get_port_list(&ctl_fd)?;
+        let xml = kernel::Ctlportlist::as_xml(&ctl_fd)?;
         println!("{}", xml);
     }
 
