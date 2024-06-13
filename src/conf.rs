@@ -217,9 +217,4 @@ impl Conf {
         let conf: Conf = builder.build().unwrap();
         Ok(conf)
     }
-
-    /// Create a Conf structure reflecting the kernel's current configuration.
-    pub fn from_xml(xml: &str) -> io::Result<()> {
-        todo!()
-    }
 }
