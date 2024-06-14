@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf}
 };
 
+use anyhow::{Context, Result};
 use strum::EnumString;
 use uclicious::*;
 
@@ -207,14 +208,14 @@ pub struct Conf {
 }
 
 impl Conf {
-    pub fn open<P: AsRef<Path>>(p: P) -> io::Result<Self> {
-        let mut f = std::fs::File::open(p)?;
+    pub fn open<P: AsRef<Path>>(p: P) -> Result<Self> {
+        let mut f = std::fs::File::open(p).context("opening config file")?;
         let mut contents = String::new();
-        f.read_to_string(&mut contents)?;
-        // TODO: use anyerror here
+        f.read_to_string(&mut contents).context("reading config file")?;
         let mut builder = Conf::builder().unwrap();
-        builder.add_chunk_full(&contents, Priority::default(), DEFAULT_DUPLICATE_STRATEGY).unwrap();
-        let conf: Conf = builder.build().unwrap();
+        builder.add_chunk_full(&contents, Priority::default(), DEFAULT_DUPLICATE_STRATEGY)
+            .context("parsing config file")?;
+        let conf: Conf = builder.build().map_err(|e| anyhow::Error::msg(format!("{}", e)))?;
         Ok(conf)
     }
 }

@@ -11,6 +11,7 @@ use std::{
     process,
 };
 
+use anyhow::{Context, Result};
 use serde::{Deserialize};
 use serde_derive::{Deserialize};
 
@@ -22,7 +23,7 @@ mod ioc {
 }
 
 /// Get either the current lun or port list from the kernel
-fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> io::Result<String>
+fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> Result<String>
 {
     let mut bufsiz: usize = 4096;
     let mut buf = Vec::<u8>::with_capacity(bufsiz);
@@ -35,9 +36,9 @@ fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> io::Result<String>
         list.status = crate::ffi::ctl_lun_list_status::CTL_LUN_LIST_NONE;
         list.lun_xml = buf.as_mut_ptr() as *mut i8;
         if port {
-            unsafe{ ioc::ctl_port_list(ctl_fd.as_raw_fd(), &mut list) }?;
+            unsafe{ ioc::ctl_port_list(ctl_fd.as_raw_fd(), &mut list) }.context("CTL_PORT_LIST")?;
         } else {
-            unsafe{ ioc::ctl_lun_list(ctl_fd.as_raw_fd(), &mut list) }?;
+            unsafe{ ioc::ctl_lun_list(ctl_fd.as_raw_fd(), &mut list) }.context("CTL_LUN_LIST")?;
         }
         match list.status {
             crate::ffi::ctl_lun_list_status::CTL_LUN_LIST_ERROR => {
@@ -57,7 +58,9 @@ fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> io::Result<String>
     }
     list.fill_len -= 1; // Trim trailing NUL
     unsafe{ buf.set_len(list.fill_len as usize) };
-    Ok(OsString::from_vec(buf).into_string().unwrap())
+    OsString::from_vec(buf)
+        .into_string()
+        .map_err(|_| anyhow::Error::msg("not a valid UTF-8 string"))
 }
 
 #[derive(Debug, Deserialize)]
@@ -85,14 +88,14 @@ pub struct Ctllunlist {
 }
 
 impl Ctllunlist {
-    pub fn from_kernel(ctl_fd: &fs::File) -> io::Result<Self> {
+    pub fn from_kernel(ctl_fd: &fs::File) -> Result<Self> {
         let xml = Self::as_xml(ctl_fd)?;
-        let llist: Self = quick_xml::de::from_str(&xml).unwrap();
+        let llist: Self = quick_xml::de::from_str(&xml).context("parsing XML")?;
         Ok(llist)
     }
 
     /// Get the kernel's current LUN list as XML
-    pub fn as_xml(ctl_fd: &fs::File) -> io::Result<String> {
+    pub fn as_xml(ctl_fd: &fs::File) -> Result<String> {
         get_lunport_list(ctl_fd, false)
     }
 }
@@ -135,14 +138,14 @@ pub struct Ctlportlist {
 }
 
 impl Ctlportlist {
-    pub fn from_kernel(ctl_fd: &fs::File) -> io::Result<Self> {
+    pub fn from_kernel(ctl_fd: &fs::File) -> Result<Self> {
         let xml = Self::as_xml(ctl_fd)?;
-        let plist: Self = quick_xml::de::from_str(&xml).unwrap();
+        let plist: Self = quick_xml::de::from_str(&xml).context("parsing XML")?;
         Ok(plist)
     }
 
     /// Get the kernel's current port list as XML
-    pub fn as_xml(ctl_fd: &fs::File) -> io::Result<String> {
+    pub fn as_xml(ctl_fd: &fs::File) -> Result<String> {
         get_lunport_list(ctl_fd, true)
     }
 }
