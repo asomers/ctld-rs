@@ -18,7 +18,10 @@ mod kernel;
 struct Cli {
     /// config file path
     #[clap(default_value = "/etc/ctl.conf", short = 'f')]
-    config: PathBuf
+    config: PathBuf,
+    /// test the configuration file for validity and exit
+    #[clap(short = 't')]
+    test: bool
 }
 
 fn main() -> Result<()> {
@@ -26,6 +29,9 @@ fn main() -> Result<()> {
 
     let conf = Conf::open(&cli.config)?;
     dbg!(&conf);
+    if cli.test {
+        return Ok(());
+    }
 
     let ctl_dev_path = {
         let cstr = CStr::from_bytes_until_nul(ffi::CTL_DEFAULT_DEV)
