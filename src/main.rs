@@ -2,19 +2,29 @@ use std::{
     ffi::{CStr, OsStr},
     fs,
     io,
-    os::unix::ffi::OsStrExt
+    os::unix::ffi::OsStrExt,
+    path::PathBuf
 };
 
 use anyhow::{Context, Result};
+use clap::Parser;
 
 mod conf;
 use crate::conf::Conf;
 mod ffi;
 mod kernel;
 
+#[derive(Debug, Default, clap::Parser)]
+struct Cli {
+    /// config file path
+    #[clap(default_value = "/etc/ctl.conf", short = 'f')]
+    config: PathBuf
+}
+
 fn main() -> Result<()> {
-    let args = std::env::args().collect::<Vec<_>>();
-    let conf = Conf::open(&args[1])?;
+    let cli: Cli = Cli::parse();
+
+    let conf = Conf::open(&cli.config)?;
     dbg!(&conf);
 
     let ctl_dev_path = {
