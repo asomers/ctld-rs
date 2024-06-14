@@ -33,13 +33,13 @@ fn main() -> Result<()> {
     let ctl_fd = fs::File::open(&ctl_dev_path).context("opening ctl device file")?;
 
     if cli.lun {
-        let xml = kernel::Ctllunlist::from_kernel(&ctl_fd).context("getting LUN list")?;
-        println!("{:?}", xml);
+        let xml = kernel::Ctllunlist::as_xml(&ctl_fd).context("getting LUN list")?;
+        println!("{}", xml);
     }
 
     if cli.port {
         let xml = kernel::Ctlportlist::as_xml(&ctl_fd).context("getting port list")?;
-        println!("{:?}", xml);
+        println!("{}", xml);
     }
 
     Ok(())
