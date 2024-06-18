@@ -9,13 +9,14 @@ use std::{
     path::{Path, PathBuf}
 };
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use strum::{EnumString, IntoStaticStr};
 use uclicious::*;
 
 #[derive(Clone, Copy, Debug, Default, Eq, EnumString, PartialEq)]
 enum AuthType {
     #[default]
+    Unknown,
     #[strum(serialize = "none")]
     None,
     #[strum(serialize = "deny")]
@@ -62,7 +63,7 @@ pub enum DeviceType {
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
 struct AuthGroup {
-    #[ucl(path = "auth-type", from_str)]
+    #[ucl(path = "auth-type", default, from_str)]
     auth_type: AuthType,
     #[ucl(default)]
     chap: Vec<Chap>,
@@ -72,6 +73,15 @@ struct AuthGroup {
     intiator_name: Option<String>,
     #[ucl(path = "initiator-portal", default)]
     initiator_portal: Vec<String>
+}
+
+impl AuthGroup {
+    fn validate(&self) -> Result<()> {
+        if self.chap.len() > 0 && self.chap_mutual.len() > 0 {
+            return Err(anyhow!("Cannot specify both chap and chap-mutual for the same auth-group"));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Uclicious)]
@@ -220,6 +230,47 @@ impl Conf {
         builder.add_chunk_full(&contents, Priority::default(), DEFAULT_DUPLICATE_STRATEGY)
             .context("parsing config file")?;
         let conf: Conf = builder.build().map_err(|e| anyhow::Error::msg(format!("{}", e)))?;
+        conf.validate()?;
         Ok(conf)
+    }
+
+    fn validate(&self) -> Result<()> {
+        for (_, ag) in self.auth_groups.iter() {
+            ag.validate()?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod t {
+    use super::*;
+
+    use std::io::Write;
+
+    use tempfile::NamedTempFile;
+
+    /// It is an error to mix chap and chap-mutual entries for the same auth-group
+    #[test]
+    fn chap_and_chap_mutual() {
+        let mut f = NamedTempFile::new().unwrap();
+        f.write_all(b"
+auth-group ag0 {
+    chap = [{
+        user = foo
+        secret = bar
+    }]
+    chap-mutual = [{
+        user = foo
+        secret = bar
+        mutual-user = \"mutualfoo\"
+        mutual-secret = \"mutualbar\"
+    }]
+}
+portal-group  {}
+lun {}
+target {
+}").unwrap();
+        Conf::open(f.path()).unwrap_err();
     }
 }
