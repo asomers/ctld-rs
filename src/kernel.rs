@@ -17,13 +17,16 @@ use serde::{Deserialize};
 use serde_derive::{Deserialize};
 
 use crate::conf;
+use crate::ffi;
 
 mod ioc {
     use nix::ioctl_readwrite;
 
-    ioctl_readwrite!(ctl_lun_list, 225, 0x22, crate::ffi::ctl_lun_list);
-    ioctl_readwrite!(ctl_port_list, 225, 0x27, crate::ffi::ctl_lun_list);
-    ioctl_readwrite!(ctl_lun_req, 225, 0x21, crate::ffi::ctl_lun_req);
+    use crate::ffi;
+
+    ioctl_readwrite!(ctl_lun_list, 225, 0x22, ffi::ctl_lun_list);
+    ioctl_readwrite!(ctl_port_list, 225, 0x27, ffi::ctl_lun_list);
+    ioctl_readwrite!(ctl_lun_req, 225, 0x21, ffi::ctl_lun_req);
 }
 
 /// Get either the current lun or port list from the kernel
@@ -33,11 +36,11 @@ fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> Result<String>
     let mut buf = Vec::<u8>::with_capacity(bufsiz);
 
     // Safe because this is how C does it.
-    let mut list: crate::ffi::ctl_lun_list = unsafe{ mem::zeroed() };
+    let mut list: ffi::ctl_lun_list = unsafe{ mem::zeroed() };
     loop {
         buf.reserve(bufsiz - buf.capacity());
         list.alloc_len = bufsiz as u32;
-        list.status = crate::ffi::ctl_lun_list_status::CTL_LUN_LIST_NONE;
+        list.status = ffi::ctl_lun_list_status::CTL_LUN_LIST_NONE;
         list.lun_xml = buf.as_mut_ptr() as *mut i8;
         if port {
             unsafe{ ioc::ctl_port_list(ctl_fd.as_raw_fd(), &mut list) }.context("CTL_PORT_LIST")?;
@@ -45,16 +48,16 @@ fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> Result<String>
             unsafe{ ioc::ctl_lun_list(ctl_fd.as_raw_fd(), &mut list) }.context("CTL_LUN_LIST")?;
         }
         match list.status {
-            crate::ffi::ctl_lun_list_status::CTL_LUN_LIST_ERROR => {
+            ffi::ctl_lun_list_status::CTL_LUN_LIST_ERROR => {
                 let error_str = unsafe{ CStr::from_ptr(list.error_str.as_ptr()) }
                     .to_string_lossy();
                 eprintln!("error returned from CTL_LUN_LIST: {}", error_str);
                 process::exit(1);
             },
-            crate::ffi::ctl_lun_list_status::CTL_LUN_LIST_NEED_MORE_SPACE => {
+            ffi::ctl_lun_list_status::CTL_LUN_LIST_NEED_MORE_SPACE => {
                 bufsiz <<= 1;
             },
-            crate::ffi::ctl_lun_list_status::CTL_LUN_LIST_OK => {
+            ffi::ctl_lun_list_status::CTL_LUN_LIST_OK => {
                 break;
             },
             status => panic!("Unexpected status from CTL_LUN_LIST: {:?}", status)
@@ -161,11 +164,11 @@ impl Ctlportlist {
 }
 
 pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<()> {
-    let mut req: crate::ffi::ctl_lun_req = unsafe{ mem::zeroed() };
+    let mut req: ffi::ctl_lun_req = unsafe{ mem::zeroed() };
     let backend = OsStr::new(Into::<&str>::into(lun.backend)).as_bytes();
     let p = backend.as_ptr() as *const i8;
     unsafe{req.backend.as_mut_ptr().copy_from_nonoverlapping(p, backend.len())};
-    req.reqtype = crate::ffi::ctl_lunreq_type::CTL_LUNREQ_CREATE;
+    req.reqtype = ffi::ctl_lunreq_type::CTL_LUNREQ_CREATE;
     req.reqdata.create.blocksize_bytes = lun.blocksize.unwrap_or(0);
     if let Some(size) = lun.size {
         req.reqdata.create.lun_size_bytes = size;
@@ -173,17 +176,17 @@ pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<
     if let Some(ctl_lun) = lun.ctl_lun {
         req.reqdata.create.req_lun_id = ctl_lun;
         // Safe because we know that we're creating, and the union is already zero-initialized
-        unsafe{ req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_ID_REQ};
+        unsafe{ req.reqdata.create.flags |= ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_ID_REQ};
     }
     // Safe because we know that we're creating, and the union is already zero-initialized
-    unsafe{ req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEV_TYPE };
+    unsafe{ req.reqdata.create.flags |= ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEV_TYPE };
     req.reqdata.create.device_type = lun.device_type as u8;
 
     if let Some(s) = &lun.serial {
         // Safe because we know that we're creating, and the union is already zero-initialized
         unsafe {
             req.reqdata.create.serial_num.copy_from_slice(OsStr::new(s).as_bytes());
-            req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_SERIAL_NUM;
+            req.reqdata.create.flags |= ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_SERIAL_NUM;
         }
     }
 
@@ -192,7 +195,7 @@ pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<
     unsafe {
         let l = os_device_id.len();
         req.reqdata.create.device_id[0..l].copy_from_slice(os_device_id.as_bytes());
-        req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEVID;
+        req.reqdata.create.flags |= ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEVID;
     }
 
     let mut nvl = libnv::libnv::NvList::new(NvFlag::None).context("NvList::new")?;
@@ -214,7 +217,7 @@ pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<
     unsafe{ ioc::ctl_lun_req(ctl_fd.as_raw_fd(), &mut req) }.context("CTL_LUNREQ_CREATE")?;
 
     // TODO: log on error in req.status
-    assert_eq!(req.status, crate::ffi::ctl_lun_status::CTL_LUN_OK);
+    assert_eq!(req.status, ffi::ctl_lun_status::CTL_LUN_OK);
     Ok(())
 }
 
