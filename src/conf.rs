@@ -10,6 +10,8 @@ use std::{
 };
 
 use anyhow::{Context, Result, anyhow};
+use serde::{Deserialize};
+use serde_derive::{Deserialize};
 use strum::{EnumString, IntoStaticStr};
 use uclicious::*;
 
@@ -40,23 +42,28 @@ enum DiscoveryFilter {
     PortalNameAuth
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, EnumString, IntoStaticStr, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, EnumString, IntoStaticStr, PartialEq)]
 pub enum Backend {
     #[default]
     #[strum(serialize = "block")]
+    #[serde(rename = "block")]
     Block,
     #[strum(serialize = "ramdisk")]
+    #[serde(rename = "ramdisk")]
     Ramdisk
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, EnumString, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, EnumString, PartialEq)]
 pub enum DeviceType {
     #[default]
     #[strum(serialize = "disk", serialize = "direct", serialize = "0")]
+    #[serde(rename = "0")]
     Disk = 0,
     #[strum(serialize = "processor", serialize = "3")]
+    #[serde(rename = "3")]
     Processor = 3,
     #[strum(serialize = "cd", serialize = "cdrom", serialize = "dvd", serialize = "dvdrom", serialize = "5")]
+    #[serde(rename = "5")]
     Cd = 5
 }
 

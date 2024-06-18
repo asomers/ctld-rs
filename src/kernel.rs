@@ -16,6 +16,8 @@ use libnv::libnv::{NvList, NvFlag};
 use serde::{Deserialize};
 use serde_derive::{Deserialize};
 
+use crate::conf;
+
 mod ioc {
     use nix::ioctl_readwrite;
 
@@ -65,21 +67,22 @@ fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> Result<String>
         .map_err(|_| anyhow::Error::msg("not a valid UTF-8 string"))
 }
 
+/// A CTL LUN published by the kernel.  The kernel may publish other fields too, which we ignore.
 #[derive(Debug, Deserialize)]
 pub struct Lun {
     #[serde(rename = "@id")]
-    pub id: String,
-    #[serde(rename = "$text")]
-    pub text: Option<String>,
-    pub backend_type: String,
-    pub lun_type: String,
-    pub size: String,
-    pub blocksize: String,
+    pub id: u64,
+    pub backend_type: conf::Backend,
+    pub lun_type: conf::DeviceType,
+    /// Device size in blocks
+    pub size: u64,
+    /// Blocksize in bytes
+    pub blocksize: u32,
     pub serial_number: String,
     pub device_id: String,
-    pub num_threads: String,
-    pub file: String,
-    pub ctld_name: String,
+    pub num_threads: Option<u32>,
+    pub file: Option<String>,
+    pub ctld_name: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,7 +96,11 @@ pub struct Ctllunlist {
 impl Ctllunlist {
     pub fn from_kernel(ctl_fd: &fs::File) -> Result<Self> {
         let xml = Self::as_xml(ctl_fd)?;
-        let llist: Self = quick_xml::de::from_str(&xml).context("parsing XML")?;
+        Self::from_xml(&xml)
+    }
+
+    fn from_xml(xml: &str) -> Result<Self> {
+        let llist: Self = quick_xml::de::from_str(xml).context("parsing XML")?;
         Ok(llist)
     }
 
@@ -209,4 +216,127 @@ pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<
     // TODO: log on error in req.status
     assert_eq!(req.status, crate::ffi::ctl_lun_status::CTL_LUN_OK);
     Ok(())
+}
+
+#[cfg(test)]
+mod t {
+    use super::*;
+
+    mod ctl_lun_list {
+        use super::*;
+
+        /// Parse a CtlLunlist that contains no LUNs.
+        #[test]
+        fn blank() {
+            let xml = "<ctllunlist></ctllunlist>";
+            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            assert!(llist.text.is_none());
+            assert!(llist.lun.is_empty());
+        }
+
+        /// Parse a Ctllunlist containing one ramdisk LUN
+        #[test]
+        fn ramdisk() {
+            let xml =
+"<ctllunlist>
+<lun id=\"42\">
+	<backend_type>ramdisk</backend_type>
+	<lun_type>0</lun_type>
+	<size>64</size>
+	<blocksize>2048</blocksize>
+	<serial_number>123456</serial_number>
+	<device_id>foo</device_id>
+</lun>
+</ctllunlist>";
+            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            assert!(llist.text.is_none());
+            assert_eq!(llist.lun.len(), 1);
+            assert_eq!(llist.lun[0].id, 42);
+            assert_eq!(llist.lun[0].backend_type, conf::Backend::Ramdisk);
+            assert_eq!(llist.lun[0].blocksize, 2048);
+            assert_eq!(llist.lun[0].size, 64);
+            assert_eq!(llist.lun[0].device_id, "foo");
+            assert_eq!(llist.lun[0].serial_number, "123456");
+            assert_eq!(llist.lun[0].lun_type, conf::DeviceType::Disk);
+        }
+
+        /// Parse a Ctllunlist containing one block LUN
+        #[test]
+        fn block() {
+            let xml =
+"<ctllunlist>
+<lun id=\"42\">
+	<backend_type>block</backend_type>
+	<lun_type>0</lun_type>
+	<size>64</size>
+	<blocksize>2048</blocksize>
+	<serial_number>123456</serial_number>
+	<device_id>foo</device_id>
+	<num_threads>32</num_threads>
+</lun>
+</ctllunlist>";
+            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            assert_eq!(llist.lun[0].id, 42);
+            assert_eq!(llist.lun[0].backend_type, conf::Backend::Block);
+            assert_eq!(llist.lun[0].blocksize, 2048);
+            assert_eq!(llist.lun[0].size, 64);
+            assert_eq!(llist.lun[0].device_id, "foo");
+            assert_eq!(llist.lun[0].serial_number, "123456");
+            assert_eq!(llist.lun[0].lun_type, conf::DeviceType::Disk);
+            assert_eq!(llist.lun[0].num_threads, Some(32));
+        }
+
+        /// Parse a Ctllunlist containing various options
+        #[test]
+        fn options() {
+            let xml =
+"<ctllunlist>
+<lun id=\"0\">
+	<backend_type>block</backend_type>
+	<lun_type>0</lun_type>
+	<size>2097152</size>
+	<blocksize>512</blocksize>
+	<serial_number>MYSERIAL0000</serial_number>
+	<device_id>MYDEVID0000</device_id>
+	<num_threads>32</num_threads>
+	<file>/tmp/testlun</file>
+	<vendor>foo</vendor>
+	<product>bar</product>
+	<revision>0123</revision>
+	<scsiname>baz</scsiname>
+	<eui>0xdeadbeef</eui>
+	<naa>0x1a7ebabe</naa>
+	<uuid>2dec855d-895c-40a1-8e98-8cba77d79777</uuid>
+	<ident_info>0x8888</ident_info>
+	<text_ident_info>eighteighteighteight</text_ident_info>
+	<ha_role>primary</ha_role>
+	<insecure_tpc>on</insecure_tpc>
+	<readcache>off</readcache>
+	<readonly>on</readonly>
+	<removable>on</removable>
+	<reordering>unrestricted</reordering>
+	<serseq>on</serseq>
+	<pblocksize>4096</pblocksize>
+	<pblockoffset>512</pblockoffset>
+	<ublocksize>131072</ublocksize>
+	<ublockoffset>0</ublockoffset>
+	<rpm>7200</rpm>
+	<formfactor>2</formfactor>
+	<temperature>75</temperature>
+	<reftemperature>70</reftemperature>
+	<provisioning_type>thin</provisioning_type>
+	<unmap>on</unmap>
+	<unmap_max_lba>1048576</unmap_max_lba>
+	<write_same_max_lba>1048576</write_same_max_lba>
+	<avail-threashold>20</avail-threashold>
+	<used-threshold>81</used-threshold>
+	<pool-avail-threshold>22</pool-avail-threshold>
+	<pool-used-threshold>83</pool-used-threshold>
+	<writecache>off</writecache>
+</lun>
+</ctllunlist>";
+            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            assert_eq!(llist.lun[0].file, Some(String::from("/tmp/testlun")));
+        }
+    }
 }
