@@ -1,17 +1,18 @@
 //! CTL's kernel interface
 use std::{
-    ffi::{CStr, OsString},
+    ffi::{CStr, OsStr, OsString},
     fs,
     io,
     mem,
     os::{
         fd::AsRawFd,
-        unix::ffi::OsStringExt,
+        unix::ffi::{OsStrExt, OsStringExt},
     },
     process,
 };
 
 use anyhow::{Context, Result};
+use libnv::libnv::{NvList, NvFlag};
 use serde::{Deserialize};
 use serde_derive::{Deserialize};
 
@@ -20,6 +21,7 @@ mod ioc {
 
     ioctl_readwrite!(ctl_lun_list, 225, 0x22, crate::ffi::ctl_lun_list);
     ioctl_readwrite!(ctl_port_list, 225, 0x27, crate::ffi::ctl_lun_list);
+    ioctl_readwrite!(ctl_lun_req, 225, 0x21, crate::ffi::ctl_lun_req);
 }
 
 /// Get either the current lun or port list from the kernel
@@ -84,6 +86,7 @@ pub struct Lun {
 pub struct Ctllunlist {
     #[serde(rename = "$text")]
     pub text: Option<String>,
+    #[serde(default)]
     pub lun: Vec<Lun>,
 }
 
@@ -114,7 +117,7 @@ pub struct TargPort {
     pub virtual_port: String,
     pub lun: Option<TargetLun>,
     pub lun_map: Option<String>,
-    pub cfiscsi_portal_group_tag: Option<String>,
+    pub cfiscsi_portal_group_tag: Option<u16>,
     pub ctld_portal_group_name: Option<String>,
     pub cfiscsi_target: Option<String>,
     pub cfiscsi_state: Option<String>,
@@ -148,4 +151,62 @@ impl Ctlportlist {
     pub fn as_xml(ctl_fd: &fs::File) -> Result<String> {
         get_lunport_list(ctl_fd, true)
     }
+}
+
+pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<()> {
+    let mut req: crate::ffi::ctl_lun_req = unsafe{ mem::zeroed() };
+    let backend = OsStr::new(Into::<&str>::into(lun.backend)).as_bytes();
+    let p = backend.as_ptr() as *const i8;
+    unsafe{req.backend.as_mut_ptr().copy_from_nonoverlapping(p, backend.len())};
+    req.reqtype = crate::ffi::ctl_lunreq_type::CTL_LUNREQ_CREATE;
+    req.reqdata.create.blocksize_bytes = lun.blocksize.unwrap_or(0);
+    if let Some(size) = lun.size {
+        req.reqdata.create.lun_size_bytes = size;
+    }
+    if let Some(ctl_lun) = lun.ctl_lun {
+        req.reqdata.create.req_lun_id = ctl_lun;
+        // Safe because we know that we're creating, and the union is already zero-initialized
+        unsafe{ req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_ID_REQ};
+    }
+    // Safe because we know that we're creating, and the union is already zero-initialized
+    unsafe{ req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEV_TYPE };
+    req.reqdata.create.device_type = lun.device_type as u8;
+
+    if let Some(s) = &lun.serial {
+        // Safe because we know that we're creating, and the union is already zero-initialized
+        unsafe {
+            req.reqdata.create.serial_num.copy_from_slice(OsStr::new(s).as_bytes());
+            req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_SERIAL_NUM;
+        }
+    }
+
+    // Safe because we know that we're creating, and the union is already zero-initialized
+    let os_device_id = OsStr::new(&lun.device_id);
+    unsafe {
+        let l = os_device_id.len();
+        req.reqdata.create.device_id[0..l].copy_from_slice(os_device_id.as_bytes());
+        req.reqdata.create.flags |= crate::ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEVID;
+    }
+
+    let mut nvl = libnv::libnv::NvList::new(NvFlag::None).context("NvList::new")?;
+
+    nvl.insert_string("file", lun.path.to_str().context("file is not a valid Str")?).context("nvlist_add_string(file)")?;
+    nvl.insert_string("ctld_name", name).context("nvlist_add_string(ctld_name)")?;
+    // TODO: handle scsiname, for target_lun only
+    for (k, v) in lun.options.iter() {
+        if ["file", "ctld_name"].contains(&k.as_str()) {
+            // These options are overwritten by regular fields
+            continue;
+        }
+        nvl.insert_string(k.as_str(), v.as_str()).context("nvlist_add_string")?;
+    }
+            
+    let mut packed_nvl = nvl.pack().context("nvlist_pack")?;
+    req.args = packed_nvl.as_mut_ptr();
+    req.args_len = packed_nvl.len();
+    unsafe{ ioc::ctl_lun_req(ctl_fd.as_raw_fd(), &mut req) }.context("CTL_LUNREQ_CREATE")?;
+
+    // TODO: log on error in req.status
+    assert_eq!(req.status, crate::ffi::ctl_lun_status::CTL_LUN_OK);
+    Ok(())
 }

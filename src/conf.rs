@@ -10,7 +10,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use strum::EnumString;
+use strum::{EnumString, IntoStaticStr};
 use uclicious::*;
 
 #[derive(Clone, Copy, Debug, Default, Eq, EnumString, PartialEq)]
@@ -39,8 +39,8 @@ enum DiscoveryFilter {
     PortalNameAuth
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, EnumString, PartialEq)]
-enum Backend {
+#[derive(Clone, Copy, Debug, Default, Eq, EnumString, IntoStaticStr, PartialEq)]
+pub enum Backend {
     #[default]
     #[strum(serialize = "block")]
     Block,
@@ -49,14 +49,14 @@ enum Backend {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, EnumString, PartialEq)]
-enum DeviceType {
+pub enum DeviceType {
     #[default]
     #[strum(serialize = "disk", serialize = "direct", serialize = "0")]
-    Disk,
+    Disk = 0,
     #[strum(serialize = "processor", serialize = "3")]
-    Processor,
+    Processor = 3,
     #[strum(serialize = "cd", serialize = "cdrom", serialize = "dvd", serialize = "dvdrom", serialize = "5")]
-    Cd
+    Cd = 5
 }
 
 #[derive(Clone, Debug, Uclicious)]
@@ -94,22 +94,23 @@ struct ChapMutual {
 
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
-struct PortalGroup {
+pub struct PortalGroup {
     #[ucl(path = "discovery-auth-group")]
     discovery_auth_group: String,
     #[ucl(path = "discovery-filter", default, from_str)]
     discovery_filter: DiscoveryFilter,
+    // TODO: allow listen to be specified with or without a port number
     #[ucl(from_str)]
     listen: SocketAddr,
     // listen-iser is not implemented
     #[ucl(default)]
     offload: Option<String>,
-    #[ucl(default)]
-    option: HashMap<String, String>,
+    #[ucl(default, path = "option")]
+    options: HashMap<String, String>,
     #[ucl(default)]
     redirect: Option<String>,
     #[ucl(default)]
-    tag: Option<u16>,
+    pub tag: Option<u16>,
     #[ucl(default)]
     foreign: bool,
     // TODO: parse the custom constants for DSCP, like "CSx"
@@ -121,24 +122,25 @@ struct PortalGroup {
 
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
-struct Lun {
+pub struct Lun {
     #[ucl(default, from_str)]
-    backend: Backend,
+    pub backend: Backend,
     #[ucl(default)]
-    blocksize: Option<i32>,
+    pub blocksize: Option<u32>,
     #[ucl(default)]
-    ctl_lun: Option<i32>,
+    pub ctl_lun: Option<u32>,
     #[ucl(path = "device-id")]
-    device_id: String,
+    pub device_id: String,
     #[ucl(default, path = "device-type", from_str)]
-    device_type: DeviceType,
+    pub device_type: DeviceType,
+    #[ucl(default, path = "option")]
+    pub options: HashMap<String, String>,
+    pub path: PathBuf,
     #[ucl(default)]
-    option: HashMap<String, String>,
-    path: PathBuf,
+    pub serial: Option<String>,
+    /// Must be specified for ramdisk-backed LUNs.  Optional for block-backed.
     #[ucl(default)]
-    serial: Option<String>,
-    #[ucl(default)]
-    size: u64,
+    pub size: Option<u64>,
 }
 
 #[derive(Clone, Debug, Uclicious)]
@@ -186,7 +188,7 @@ struct Target {
 #[derive(Debug, Uclicious)]
 pub struct Conf {
     #[ucl(path = "auth-group")]
-    auth_group: HashMap<String, AuthGroup>,
+    auth_groups: HashMap<String, AuthGroup>,
     #[ucl(default = "0")]
     debug: i32,
     #[ucl(default = "30")]
@@ -194,9 +196,11 @@ pub struct Conf {
     #[ucl(default = "PathBuf::from(\"/var/run/ctld.pid\")")]
     pidfile: PathBuf,
     #[ucl(path = "portal-group")]
-    portal_group: HashMap<String, PortalGroup>,
-    lun: HashMap<String, Lun>,
-    target: HashMap<String, Target>,
+    pub portal_groups: HashMap<String, PortalGroup>,
+    #[ucl(path = "lun")]
+    pub luns: HashMap<String, Lun>,
+    #[ucl(path = "target")]
+    targets: HashMap<String, Target>,
     #[ucl(default = "60")]
     timeout: i32,
     #[ucl(default, path = "isns-server")]

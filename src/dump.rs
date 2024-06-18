@@ -9,6 +9,7 @@ use std::{
 use anyhow::{Context, Result};
 use clap::Parser;
 
+mod conf;
 mod ffi;
 mod kernel;
 
