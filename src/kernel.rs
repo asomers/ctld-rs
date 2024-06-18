@@ -19,6 +19,7 @@ use serde_derive::{Deserialize};
 use crate::conf;
 use crate::ffi;
 
+#[cfg(not(test))]
 mod ioc {
     use nix::ioctl_readwrite;
 
@@ -28,6 +29,24 @@ mod ioc {
     ioctl_readwrite!(ctl_port_list, 225, 0x27, ffi::ctl_lun_list);
     ioctl_readwrite!(ctl_lun_req, 225, 0x21, ffi::ctl_lun_req);
 }
+// Mockall doesn't understand Nix's ioctl_readwrite! macro, so we need to write the mocks manually
+#[cfg(test)]
+mod mockable {
+    #[mockall::automock]
+    pub mod ioc {
+        use std::os::fd::RawFd;
+        use crate::ffi;
+
+        pub unsafe fn ctl_lun_list(_fd: RawFd, _data: *mut ffi::ctl_lun_list)
+            -> nix::Result<i32> { unimplemented!() }
+        pub unsafe fn ctl_port_list(_fd: RawFd, _data: *mut ffi::ctl_lun_list)
+            -> nix::Result<i32> { unimplemented!() }
+        pub unsafe fn ctl_lun_req(_fd: RawFd, _data: *mut ffi::ctl_lun_req)
+            -> nix::Result<i32> { unimplemented!() }
+    }
+}
+#[cfg(test)]
+use mockable::mock_ioc as ioc;
 
 /// Get either the current lun or port list from the kernel
 fn get_lunport_list(ctl_fd: &fs::File, port: bool) -> Result<String>
@@ -224,6 +243,51 @@ pub fn add_lun(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<
 #[cfg(test)]
 mod t {
     use super::*;
+
+    mod add_lun {
+        use super::*;
+
+        /// Add the simplest possible LUN. Test that we pass a correctly formatted request to the
+        /// kernel.
+        #[test]
+        fn basic() {
+            let lun = crate::conf::Lun {
+                backend: crate::conf::Backend::Ramdisk,
+                blocksize: Some(2048),
+                ctl_lun: Some(0),
+                device_id: String::from("ramdisk0"),
+                device_type: crate::conf::DeviceType::Disk,
+                options: Default::default(),
+                path: Default::default(),
+                serial: None,
+                size: Some(131072)
+            };
+            let dev_ctl = fs::File::open("/dev/null").unwrap();
+
+            let ctx = ioc::ctl_lun_req_context();
+            ctx.expect()
+                .withf(|_fd, req| unsafe {
+                    let flags = ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_ID_REQ |
+                        ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEV_TYPE |
+                        ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEVID;
+                    let ubackend = unsafe { &*(&(**req).backend as *const [i8] as *const [u8]) };
+                    &ubackend[0..8] == &b"ramdisk\0"[0..8] &&
+                    (**req).reqtype == ffi::ctl_lunreq_type::CTL_LUNREQ_CREATE &&
+                    (**req).reqdata.create.flags == flags &&
+                    (**req).reqdata.create.device_type == 0 &&
+                    (**req).reqdata.create.lun_size_bytes == 131072 &&
+                    (**req).reqdata.create.blocksize_bytes == 2048 &&
+                    (**req).reqdata.create.blocksize_bytes == 2048 &&
+                    &(**req).reqdata.create.device_id[0..9] == &b"ramdisk0\0"[0..9]
+                })
+                .returning(|_fd, req| {
+                    unsafe{(*req).status = ffi::ctl_lun_status::CTL_LUN_OK};
+                    Ok(0)
+                });
+
+            super::super::add_lun(&dev_ctl, "foo", &lun).unwrap();
+        }
+    }
 
     mod ctl_lun_list {
         use super::*;

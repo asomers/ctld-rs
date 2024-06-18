@@ -23,6 +23,7 @@ strum = {version = "0.26.2", features = ["derive"] }
 uclicious = "0.1.8"
 
 [dev-dependencies]
+mockall = {version = "0.12.1", features = ["nightly"] }
 tempfile = "3.10"
 
 [patch.crates-io]
