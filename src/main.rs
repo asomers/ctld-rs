@@ -10,10 +10,10 @@ use std::{
 use anyhow::{Context, Result};
 use clap::Parser;
 
-mod conf;
-use crate::conf::Conf;
-mod ffi;
-mod kernel;
+use ctld::conf;
+use ctld::ffi;
+use ctld::kernel;
+use ctld::conf::Conf;
 
 static LAST_PORTAL_GROUP_TAG: AtomicU16 = AtomicU16::new(0xff);
 
