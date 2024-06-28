@@ -49,7 +49,7 @@ fn apply_conf(
 
     // Add any LUNs from the config file
     for (name, lun) in conf.luns.iter() {
-        kernel::add_lun(&ctl_fd, name.as_str(), lun)?;
+        kernel::Lun::create(&ctl_fd, name.as_str(), lun)?;
     }
     todo!()
 }
