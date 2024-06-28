@@ -120,7 +120,10 @@ impl Lun {
 
 impl Drop for Lun {
     fn drop(&mut self) {
-        todo!()
+        let r = Self::lunreq_rm(crate::ctl(), self.backend, self.id);
+        if !std::thread::panicking() {
+            r.expect("Lun::drop");
+        }
     }
 }
 
