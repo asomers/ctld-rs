@@ -12,6 +12,7 @@ use clap::Parser;
 
 use ctld::conf;
 use ctld::ffi;
+use ctld::kconf;
 use ctld::kernel;
 use ctld::conf::Conf;
 
@@ -30,8 +31,8 @@ struct Cli {
 /// Apply an initial configuration to the running kernel
 fn apply_conf(
     ctl_fd: &fs::File,
-    klun_list: &kernel::Ctllunlist,
-    kport_list: &kernel::Ctlportlist,
+    klun_list: &kconf::Ctllunlist,
+    kport_list: &kconf::Ctlportlist,
     conf: &mut Conf) -> Result<()>
 {
     assert!(klun_list.lun.is_empty(), "Handling preexisting LUNs is TODO");
@@ -72,9 +73,9 @@ fn main() -> Result<()> {
     };
     let ctl_fd = fs::File::open(&ctl_dev_path).context("opening ctl device file")?;
 
-    let klun_list = kernel::Ctllunlist::from_kernel(&ctl_fd).context("getting LUN list")?;
+    let klun_list = kconf::Ctllunlist::from_kernel(&ctl_fd).context("getting LUN list")?;
     dbg!(&klun_list);
-    let kport_list = kernel::Ctlportlist::from_kernel(&ctl_fd).context("getting port list")?;
+    let kport_list = kconf::Ctlportlist::from_kernel(&ctl_fd).context("getting port list")?;
     dbg!(&kport_list);
 
     apply_conf(&ctl_fd, &klun_list, &kport_list, &mut conf)?;

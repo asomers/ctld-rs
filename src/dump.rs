@@ -11,7 +11,7 @@ use clap::Parser;
 
 use ctld::conf;
 use ctld::ffi;
-use ctld::kernel;
+use ctld::kconf;
 
 #[derive(Debug, Default, clap::Parser)]
 struct Cli {
@@ -34,12 +34,12 @@ fn main() -> Result<()> {
     let ctl_fd = fs::File::open(&ctl_dev_path).context("opening ctl device file")?;
 
     if cli.lun {
-        let xml = kernel::Ctllunlist::as_xml(&ctl_fd).context("getting LUN list")?;
+        let xml = kconf::Ctllunlist::as_xml(&ctl_fd).context("getting LUN list")?;
         println!("{}", xml);
     }
 
     if cli.port {
-        let xml = kernel::Ctlportlist::as_xml(&ctl_fd).context("getting port list")?;
+        let xml = kconf::Ctlportlist::as_xml(&ctl_fd).context("getting port list")?;
         println!("{}", xml);
     }
 
