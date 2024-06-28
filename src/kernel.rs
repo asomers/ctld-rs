@@ -107,7 +107,8 @@ impl Lun {
         Ok(())
     }
 
-    pub fn create(ctl_fd: &fs::File, name: &str, lun: &crate::conf::Lun) -> Result<Self> {
+    pub fn create(name: &str, lun: &crate::conf::Lun) -> Result<Self> {
+        let ctl_fd = crate::ctl();
         let req = Self::lunreq_create(ctl_fd, name, lun)?;
         let id = unsafe { req.reqdata.create.req_lun_id };
         Ok(Lun {

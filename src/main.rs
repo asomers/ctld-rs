@@ -30,7 +30,6 @@ struct Cli {
 
 /// Apply an initial configuration to the running kernel
 fn apply_conf(
-    ctl_fd: &fs::File,
     klun_list: &kconf::Ctllunlist,
     kport_list: &kconf::Ctlportlist,
     conf: &mut Conf) -> Result<()>
@@ -49,7 +48,7 @@ fn apply_conf(
 
     // Add any LUNs from the config file
     for (name, lun) in conf.luns.iter() {
-        kernel::Lun::create(&ctl_fd, name.as_str(), lun)?;
+        kernel::Lun::create(name.as_str(), lun)?;
     }
     todo!()
 }
@@ -66,19 +65,12 @@ fn main() -> Result<()> {
     // TODO: open pidfile
     // TODO: set loglevel based on conf.debug
 
-    let ctl_dev_path = {
-        let cstr = CStr::from_bytes_until_nul(ffi::CTL_DEFAULT_DEV)
-            .context("config file path is not a valid CStr")?;
-        OsStr::from_bytes(cstr.to_bytes())
-    };
-    let ctl_fd = fs::File::open(&ctl_dev_path).context("opening ctl device file")?;
-
-    let klun_list = kconf::Ctllunlist::from_kernel(&ctl_fd).context("getting LUN list")?;
+    let klun_list = kconf::Ctllunlist::from_kernel().context("getting LUN list")?;
     dbg!(&klun_list);
-    let kport_list = kconf::Ctlportlist::from_kernel(&ctl_fd).context("getting port list")?;
+    let kport_list = kconf::Ctlportlist::from_kernel().context("getting port list")?;
     dbg!(&kport_list);
 
-    apply_conf(&ctl_fd, &klun_list, &kport_list, &mut conf)?;
+    apply_conf(&klun_list, &kport_list, &mut conf)?;
 
     Ok(())
 }
