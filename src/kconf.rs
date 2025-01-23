@@ -1,20 +1,16 @@
 //! Read the state of CTL in the running kernel.
 use std::{
-    ffi::{CStr, OsStr, OsString},
-    fs,
-    io,
+    ffi::{CStr, OsString},
     mem,
     os::{
         fd::AsRawFd,
-        unix::ffi::{OsStrExt, OsStringExt},
+        unix::ffi::OsStringExt,
     },
     process,
 };
 
 use anyhow::{Context, Result};
-use libnv::libnv::{NvList, NvFlag};
-use serde::{Deserialize};
-use serde_derive::{Deserialize};
+use serde_derive::Deserialize;
 
 use crate::conf;
 use crate::ffi;

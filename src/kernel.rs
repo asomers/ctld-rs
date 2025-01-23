@@ -1,21 +1,17 @@
 //! Create, destroy, and manipulate CTL kernel objects
 
 use std::{
-    ffi::{CStr, OsStr, OsString},
+    ffi::OsStr,
     fs,
-    io,
     mem,
     os::{
         fd::AsRawFd,
-        unix::ffi::{OsStrExt, OsStringExt},
+        unix::ffi::OsStrExt,
     },
-    process,
 };
 
 use anyhow::{Context, Result};
-use libnv::libnv::{NvList, NvFlag};
-use serde::{Deserialize};
-use serde_derive::{Deserialize};
+use libnv::libnv::NvFlag;
 
 use crate::conf;
 use crate::ffi;

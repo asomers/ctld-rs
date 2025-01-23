@@ -1,16 +1,7 @@
 //! Helper utility to dump the kernel's XML config
-use std::{
-    ffi::{CStr, OsStr},
-    fs,
-    io,
-    os::unix::ffi::OsStrExt,
-};
-
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use ctld::conf;
-use ctld::ffi;
 use ctld::kconf;
 
 #[derive(Debug, Default, clap::Parser)]

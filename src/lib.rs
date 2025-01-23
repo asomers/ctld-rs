@@ -3,12 +3,9 @@
 use std::{
     ffi::{CStr, OsStr,FromBytesUntilNulError },
     fs,
-    io,
     os::unix::ffi::OsStrExt,
     sync::OnceLock
 };
-
-use anyhow::{Context, Result};
 
 pub mod conf;
 pub mod ffi;

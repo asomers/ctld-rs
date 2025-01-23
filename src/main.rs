@@ -1,8 +1,4 @@
 use std::{
-    ffi::{CStr, OsStr},
-    fs,
-    io,
-    os::unix::ffi::OsStrExt,
     path::PathBuf,
     sync::atomic::{AtomicU16, Ordering}
 };
@@ -10,8 +6,6 @@ use std::{
 use anyhow::{Context, Result};
 use clap::Parser;
 
-use ctld::conf;
-use ctld::ffi;
 use ctld::kconf;
 use ctld::kernel;
 use ctld::conf::Conf;

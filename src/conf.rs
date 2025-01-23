@@ -4,13 +4,12 @@
 
 use std::{
     collections::HashMap,
-    io::{self, Read},
+    io::Read,
     net::SocketAddr,
     path::{Path, PathBuf}
 };
 
 use anyhow::{Context, Result, anyhow};
-use serde::{Deserialize};
 use serde_derive::{Deserialize};
 use strum::{EnumString, IntoStaticStr};
 use uclicious::*;
