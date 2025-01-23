@@ -160,7 +160,7 @@ mod t {
                     let flags = ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_ID_REQ |
                         ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEV_TYPE |
                         ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEVID;
-                    let ubackend = unsafe { &*(&(**req).backend as *const [i8] as *const [u8]) };
+                    let ubackend = &*(&(**req).backend as *const [i8] as *const [u8]);
                     &ubackend[0..8] == &b"ramdisk\0"[0..8] &&
                     (**req).reqtype == ffi::ctl_lunreq_type::CTL_LUNREQ_CREATE &&
                     (**req).reqdata.create.flags == flags &&
@@ -191,7 +191,7 @@ mod t {
             let ctx = ioc::ctl_lun_req_context();
             ctx.expect()
                 .withf(|_fd, req| unsafe {
-                    let ubackend = unsafe { &*(&(**req).backend as *const [i8] as *const [u8]) };
+                    let ubackend = &*(&(**req).backend as *const [i8] as *const [u8]);
                     &ubackend[0..8] == &b"ramdisk\0"[0..8] &&
                     (**req).reqtype == ffi::ctl_lunreq_type::CTL_LUNREQ_RM &&
                     (**req).reqdata.rm.lun_id == 42
