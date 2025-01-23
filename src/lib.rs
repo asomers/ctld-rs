@@ -25,6 +25,6 @@ pub fn ctl() -> &'static fs::File {
                 CStr::from_bytes_until_nul(ffi::CTL_DEFAULT_DEV);
             OsStr::from_bytes(CSTR.unwrap().to_bytes())
         };
-        fs::File::open(&ctl_dev_path).expect("opening ctl device file")
+        fs::File::open(ctl_dev_path).expect("opening ctl device file")
     })
 }

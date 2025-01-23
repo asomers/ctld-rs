@@ -1,3 +1,6 @@
+#![allow(clippy::items_after_test_module)]
+#![allow(clippy::module_inception)]
+
 #[cfg(not(test))]
 pub mod ioc {
     use nix::ioctl_readwrite;

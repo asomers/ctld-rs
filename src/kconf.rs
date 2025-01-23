@@ -163,7 +163,7 @@ mod t {
         #[test]
         fn blank() {
             let xml = "<ctllunlist></ctllunlist>";
-            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            let llist = Ctllunlist::from_xml(xml).unwrap();
             assert!(llist.text.is_none());
             assert!(llist.lun.is_empty());
         }
@@ -182,7 +182,7 @@ mod t {
 	<device_id>foo</device_id>
 </lun>
 </ctllunlist>";
-            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            let llist = Ctllunlist::from_xml(xml).unwrap();
             assert!(llist.text.is_none());
             assert_eq!(llist.lun.len(), 1);
             assert_eq!(llist.lun[0].id, 42);
@@ -209,7 +209,7 @@ mod t {
 	<num_threads>32</num_threads>
 </lun>
 </ctllunlist>";
-            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            let llist = Ctllunlist::from_xml(xml).unwrap();
             assert_eq!(llist.lun[0].id, 42);
             assert_eq!(llist.lun[0].backend_type, conf::Backend::Block);
             assert_eq!(llist.lun[0].blocksize, 2048);
@@ -269,7 +269,7 @@ mod t {
 	<writecache>off</writecache>
 </lun>
 </ctllunlist>";
-            let llist = Ctllunlist::from_xml(&xml).unwrap();
+            let llist = Ctllunlist::from_xml(xml).unwrap();
             assert_eq!(llist.lun[0].file, Some(String::from("/tmp/testlun")));
         }
     }

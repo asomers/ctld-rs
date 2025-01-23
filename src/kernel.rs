@@ -161,14 +161,13 @@ mod t {
                         ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEV_TYPE |
                         ffi::ctl_backend_lun_flags::CTL_LUN_FLAG_DEVID;
                     let ubackend = &*(&(**req).backend as *const [i8] as *const [u8]);
-                    &ubackend[0..8] == &b"ramdisk\0"[0..8] &&
+                    ubackend[0..8] == b"ramdisk\0"[0..8] &&
                     (**req).reqtype == ffi::ctl_lunreq_type::CTL_LUNREQ_CREATE &&
                     (**req).reqdata.create.flags == flags &&
                     (**req).reqdata.create.device_type == 0 &&
                     (**req).reqdata.create.lun_size_bytes == 131072 &&
                     (**req).reqdata.create.blocksize_bytes == 2048 &&
-                    (**req).reqdata.create.blocksize_bytes == 2048 &&
-                    &(**req).reqdata.create.device_id[0..9] == &b"ramdisk0\0"[0..9]
+                    (**req).reqdata.create.device_id[0..9] == b"ramdisk0\0"[0..9]
                 })
                 .returning(|_fd, req| {
                     unsafe{(*req).status = ffi::ctl_lun_status::CTL_LUN_OK};
@@ -192,7 +191,7 @@ mod t {
             ctx.expect()
                 .withf(|_fd, req| unsafe {
                     let ubackend = &*(&(**req).backend as *const [i8] as *const [u8]);
-                    &ubackend[0..8] == &b"ramdisk\0"[0..8] &&
+                    ubackend[0..8] == b"ramdisk\0"[0..8] &&
                     (**req).reqtype == ffi::ctl_lunreq_type::CTL_LUNREQ_RM &&
                     (**req).reqdata.rm.lun_id == 42
                 })

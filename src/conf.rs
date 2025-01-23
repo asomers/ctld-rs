@@ -86,7 +86,7 @@ struct AuthGroup {
 
 impl AuthGroup {
     fn validate(&self) -> Result<()> {
-        if self.chap.len() > 0 && self.chap_mutual.len() > 0 {
+        if !self.chap.is_empty() && !self.chap_mutual.is_empty() {
             return Err(anyhow!("Cannot specify both chap and chap-mutual for the same auth-group"));
         }
         Ok(())
