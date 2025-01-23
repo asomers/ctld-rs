@@ -34,15 +34,15 @@ components to require an external toolchain.  And since CTL's ioctl interface
 is considered unstable, a program like ctld can't live outside of the tree.  So
 I don't plan to do any more work on this project.
 
-[✓] CLI
-[✓] UCL config file parsing
-[✓] Kernel XML parsing
-[✓] LUN creation and destruction
-[ ] Target creation and destruction
-[ ] Handling client connections
-[ ] isns
-[ ] iSCSI discovery
-[ ] Legacy config file parsing
+- [x] CLI
+- [x] UCL config file parsing
+- [x] Kernel XML parsing
+- [x] LUN creation and destruction
+- [ ] Target creation and destruction
+- [ ] Handling client connections
+- [ ] isns
+- [ ] iSCSI discovery
+- [ ] Legacy config file parsing
 
 ## Bugs
 
