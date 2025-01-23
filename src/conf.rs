@@ -70,14 +70,17 @@ pub enum DeviceType {
 #[ucl(skip_builder)]
 struct AuthGroup {
     #[ucl(path = "auth-type", default, from_str)]
+    #[expect(unused)]    // TODO: implement me
     auth_type: AuthType,
     #[ucl(default)]
     chap: Vec<Chap>,
     #[ucl(default, path = "chap-mutual")]
     chap_mutual: Vec<ChapMutual>,
     #[ucl(default, path = "initiator-name")]
+    #[expect(unused)]    // TODO: implement me
     intiator_name: Option<String>,
     #[ucl(path = "initiator-portal", default)]
+    #[expect(unused)]    // TODO: implement me
     initiator_portal: Vec<String>
 }
 
@@ -93,18 +96,24 @@ impl AuthGroup {
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
 struct Chap {
+    #[expect(unused)]    // TODO: implement me
     user: String,
+    #[expect(unused)]    // TODO: implement me
     secret: String
 }
 
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
 struct ChapMutual {
+    #[expect(unused)]    // TODO: implement me
     user: String,
+    #[expect(unused)]    // TODO: implement me
     secret: String,
     #[ucl(path = "mutual-user")]
+    #[expect(unused)]    // TODO: implement me
     mutual_user: String,
     #[ucl(path = "mutual-secret")]
+    #[expect(unused)]    // TODO: implement me
     mutual_secret: String,
 }
 
@@ -112,27 +121,36 @@ struct ChapMutual {
 #[ucl(skip_builder)]
 pub struct PortalGroup {
     #[ucl(path = "discovery-auth-group")]
+    #[expect(unused)]    // TODO: implement me
     discovery_auth_group: String,
     #[ucl(path = "discovery-filter", default, from_str)]
+    #[expect(unused)]    // TODO: implement me
     discovery_filter: DiscoveryFilter,
     // TODO: allow listen to be specified with or without a port number
     #[ucl(from_str)]
+    #[expect(unused)]    // TODO: implement me
     listen: SocketAddr,
     // listen-iser is not implemented
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     offload: Option<String>,
     #[ucl(default, path = "option")]
+    #[expect(unused)]    // TODO: implement me
     options: HashMap<String, String>,
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     redirect: Option<String>,
     #[ucl(default)]
     pub tag: Option<u16>,
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     foreign: bool,
     // TODO: parse the custom constants for DSCP, like "CSx"
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     dscp: Option<i32>,
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     pcp: Option<i32>
 }
 
@@ -162,15 +180,19 @@ pub struct Lun {
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
 struct TargetLun {
+    #[expect(unused)]    // TODO: implement me
     number: u64,
+    #[expect(unused)]    // TODO: implement me
     name: String
 }
 
 #[derive(Clone, Debug, Uclicious)]
 #[ucl(skip_builder)]
 struct TargetPortalGroup {
+    #[expect(unused)]    // TODO: implement me
     name: String,
     #[ucl(default, path = "ag-name")]
+    #[expect(unused)]    // TODO: implement me
     ag_name: Option<String>
 }
 
@@ -178,25 +200,36 @@ struct TargetPortalGroup {
 #[ucl(skip_builder)]
 struct Target {
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     alias: Option<String>,
     #[ucl(path = "auth-group")]
+    #[expect(unused)]    // TODO: implement me
     auth_group: String,
     #[ucl(path = "auth-type", default, from_str)]
+    #[expect(unused)]    // TODO: implement me
     auth_type: AuthType,
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     chap: Vec<Chap>,
     #[ucl(default, path = "chap-mutual")]
+    #[expect(unused)]    // TODO: implement me
     chap_mutual: Vec<ChapMutual>,
     #[ucl(default, path = "initiator-name")]
+    #[expect(unused)]    // TODO: implement me
     intiator_name: Option<String>,
     #[ucl(path = "initiator-portal", default)]
+    #[expect(unused)]    // TODO: implement me
     initiator_portal: Vec<String>,
     #[ucl(path = "portal-group")]
+    #[expect(unused)]    // TODO: implement me
     portal_group: TargetPortalGroup,
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     port: Option<String>,
     #[ucl(default)]
+    #[expect(unused)]    // TODO: implement me
     redirect: Option<String>,
+    #[expect(unused)]    // TODO: implement me
     lun: Vec<TargetLun>,
 }
 
@@ -206,24 +239,32 @@ pub struct Conf {
     #[ucl(path = "auth-group")]
     auth_groups: HashMap<String, AuthGroup>,
     #[ucl(default = "0")]
+    #[expect(unused)]    // TODO: implement me
     debug: i32,
     #[ucl(default = "30")]
+    #[expect(unused)]    // TODO: implement me
     maxproc: i32,
     #[ucl(default = "PathBuf::from(\"/var/run/ctld.pid\")")]
+    #[expect(unused)]    // TODO: implement me
     pidfile: PathBuf,
     #[ucl(path = "portal-group")]
     pub portal_groups: HashMap<String, PortalGroup>,
     #[ucl(path = "lun")]
     pub luns: HashMap<String, Lun>,
     #[ucl(path = "target")]
+    #[expect(unused)]    // TODO: implement me
     targets: HashMap<String, Target>,
     #[ucl(default = "60")]
+    #[expect(unused)]    // TODO: implement me
     timeout: i32,
     #[ucl(default, path = "isns-server")]
+    #[expect(unused)]    // TODO: implement me
     isns_server: Vec<SocketAddr>,
     #[ucl(path = "isns-period", default = "900")]
+    #[expect(unused)]    // TODO: implement me
     isns_period: i32,
     #[ucl(path = "isns-timeout", default = "5")]
+    #[expect(unused)]    // TODO: implement me
     isns_timeout: i32
 }
 
