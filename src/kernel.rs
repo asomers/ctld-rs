@@ -167,7 +167,7 @@ mod t {
                     (**req).reqdata.create.device_type == 0 &&
                     (**req).reqdata.create.lun_size_bytes == 131072 &&
                     (**req).reqdata.create.blocksize_bytes == 2048 &&
-                    (**req).reqdata.create.device_id[0..9] == b"ramdisk0\0"[0..9]
+                    (&(**req).reqdata.create.device_id)[0..9] == b"ramdisk0\0"[0..9]
                 })
                 .returning(|_fd, req| {
                     unsafe{(*req).status = ffi::ctl_lun_status::CTL_LUN_OK};
